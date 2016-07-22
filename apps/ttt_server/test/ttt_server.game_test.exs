@@ -25,7 +25,7 @@ defmodule TttServer.GameTest do
     {:ok, _} = TttServer.Game.place_move(game, 1, 9)
     {gameStatus, _,_} = TttServer.Game.game_status(game)
 
-    assert gameStatus == :game_won
+    assert gameStatus == :game_over
   end
 
   test "game status is correct after 3 moves" do

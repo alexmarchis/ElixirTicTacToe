@@ -2,6 +2,7 @@ defmodule TttServer.GameArena do
   use GenServer
 
   def start_link(name) do
+    IO.puts("Starting game arena...")
     GenServer.start_link(__MODULE__, :ok, name: name)
   end
 
@@ -72,6 +73,15 @@ defmodule TttServer.GameArena do
       {:reply, message, {players, games}}
   end
 
+  defp handle_game_status(gameId, gamePid) do
+    case TttServer.Game.game_status(gamePid) do
+      {:game_is_on, _message, _gameState} -> {:ok, "Good move"}
+      {:game_over, _message, gameState} ->
+        update_players(gameState)
+        end_game(gameId, gamePid)
+    end
+  end
+
   def handle_call({:get_game_status, gameId}, _from, {players, games}) do
     message =
       with {:ok, game} <- Map.fetch(games, gameId),
@@ -96,7 +106,7 @@ defmodule TttServer.GameArena do
   end
 
   defp create_game(gameId) do
-    {:ok, gamePid} = TttServer.Game.start_link()
+    {:ok, gamePid} = TttServer.Game.Supervisor.start_game()
     %TttServer.Game{gameId: gameId, gamePid: gamePid}
   end
 

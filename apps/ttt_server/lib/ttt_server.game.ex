@@ -36,7 +36,7 @@ defmodule TttServer.Game do
       {:waiting_for_players, "Don't be shy", nil}
     else
       if(game_won?(gameState[:board])) do
-        {:game_won, "Congrats", gameState}
+        {:game_over, "Congrats", gameState}
       else
         {:game_is_on, "Keep playing", gameState}
       end
@@ -74,7 +74,9 @@ defmodule TttServer.Game do
   end
 
   defp new_game do
-    [players: [x: nil, y: nil], board: empty_board, last_move: nil]
+    [players: [x: nil, y: nil],
+     board: empty_board,
+     last_move: nil]
   end
 
   defp empty_board do
