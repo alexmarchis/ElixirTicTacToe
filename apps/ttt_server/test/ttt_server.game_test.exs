@@ -28,6 +28,34 @@ defmodule TttServer.GameTest do
     assert gameStatus == :game_over
   end
 
+  test "temporary test: game is won by last player game is closed after both players know the result" do
+    {:ok, game} = TttServer.Game.start_link()
+    TttServer.Game.add_player(game, 1)
+    TttServer.Game.add_player(game, 2)
+
+    {:ok, _} = TttServer.Game.place_move(game, 1, 1)
+    {:game_is_on, _, _} = TttServer.Game.game_status(game)
+    {:ok, _} = TttServer.Game.place_move(game, 2, 2)
+    {:game_is_on, _, _} = TttServer.Game.game_status(game)
+    {:ok, _} = TttServer.Game.place_move(game, 1, 3)
+    {:game_is_on, _, _} = TttServer.Game.game_status(game)
+    {:ok, _} = TttServer.Game.place_move(game, 2, 4)
+    {:game_is_on, _, _} = TttServer.Game.game_status(game)
+    {:ok, _} = TttServer.Game.place_move(game, 1, 5)
+    {:game_is_on, _, _} = TttServer.Game.game_status(game)
+    {:ok, _} = TttServer.Game.place_move(game, 2, 6)
+    {:game_is_on, _, _} = TttServer.Game.game_status(game)
+    {:ok, _} = TttServer.Game.place_move(game, 1, 7)
+    {:game_is_on, _, _} = TttServer.Game.game_status(game)
+    {:ok, _} = TttServer.Game.place_move(game, 2, 8)
+    {:game_is_on, _, _} = TttServer.Game.game_status(game)
+    {:ok, _} = TttServer.Game.place_move(game, 1, 9)
+    {_, _,_} = TttServer.Game.game_status(game, 1)
+    {gameStatus, _,_} = TttServer.Game.game_status(game, 2)
+
+    assert gameStatus == :game_closed
+  end
+
   test "game status is correct after 3 moves" do
     {:ok, game} = TttServer.Game.start_link()
     TttServer.Game.add_player(game, 1)

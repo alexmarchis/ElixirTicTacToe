@@ -4,7 +4,7 @@ defmodule TttServer.Game do
   def start_link, do: Agent.start_link fn -> new_game end;
 
   def place_move(gamePid, playerId, position) do
-    with  {:game_is_on, _, gameState} <- game_status(gamePid),
+    with  {:game_is_on, _symbol, gameState} <- game_status(gamePid),
           {:ok, playerSymbol}         <- get_player_symbol(gameState[:players], playerId),
           {:ok, _}                    <- check_player_turn(gameState, playerSymbol),
           {:ok, board}                <- place_player_symbol(gameState[:board], position, playerSymbol),
@@ -18,14 +18,34 @@ defmodule TttServer.Game do
     case gameState[:players] do
       [x: nil, y: nil] ->
         Agent.update(gamePid, fn [players: _, board: board, last_move: last_move] ->
-                                 [players: [x: playerId, y: nil], board: board, last_move: last_move] end)
+                                 [players: [x: {playerId, false}, y: nil], board: board, last_move: last_move] end)
         {:ok, "Player added"}
-      [x: ^playerId, y: nil] -> {:error, "Player already in the game"}
-      [x: xPlayer, y: nil] ->
+      [x: {^playerId, _announced} , y: nil] -> {:error, "Player already in the game"}
+      [x: {xPlayer, _announced}, y: nil] ->
         Agent.update(gamePid, fn [players: _, board: board, last_move: last_move] ->
-                                 [players: [x: xPlayer, y: playerId], board: board, last_move: last_move] end)
+                                 [players: [x: {xPlayer, false}, y: {playerId, false}], board: board, last_move: last_move] end)
         {:ok, "Player added, game is started."}
       [x: _, y: _] -> {:error, "Game is started"}
+    end
+  end
+
+  def game_status(gamePid, playerId) do
+    case game_status(gamePid) do
+      {:game_is_on, _symbol, gameState} -> {:game_is_on, "Keep playing", gameState}
+      {:game_over, winningSymbol, gameState} ->
+        {:ok, playerSymbol} = get_player_symbol(gameState[:players], playerId)
+        IO.inspect gameState
+        announcedPlayers = Keyword.put(gameState[:players], playerSymbol, {playerId, true})
+        Agent.update(gamePid, fn [players: players, board: board, last_move: last_move] ->
+                                 [players: announcedPlayers, board: board, last_move: last_move] end)
+
+        {winnerId, _announced} = gameState[:players][winningSymbol]
+
+        if Enum.all?(announcedPlayers, fn {_symbol, {_playerId, announced}} -> announced==true end) do
+          {:game_closed, winnerId, gameState}
+        else
+          {:game_over, winnerId, gameState}
+        end
     end
   end
 
@@ -35,18 +55,15 @@ defmodule TttServer.Game do
     || gameState[:players][:y] == nil) do
       {:waiting_for_players, "Don't be shy", nil}
     else
-      if(game_won?(gameState[:board])) do
-        {:game_over, "Congrats", gameState}
-      else
-        {:game_is_on, "Keep playing", gameState}
-      end
+      {winningState, winningSymbol} = board_winning_state(gameState[:board])
+      {winningState, winningSymbol, gameState}
     end
   end
 
   defp get_player_symbol(players, playerId) do
-    case Enum.find(players, fn {_, searchedPlayerId} -> searchedPlayerId == playerId end) do
+    case Enum.find(players, fn {_symbol, {searchedPlayerId, _announced}} -> searchedPlayerId == playerId end) do
       nil               -> {:invalid_player, nil}
-      {playerSymbol, _} -> {:ok, playerSymbol}
+      {playerSymbol, _player} -> {:ok, playerSymbol}
     end
   end
 
@@ -69,8 +86,12 @@ defmodule TttServer.Game do
     end
   end
 
-  defp game_won?(board) do
-    Enum.all?(board, fn {_, elem} -> elem != nil end)
+  defp board_winning_state(board) do
+    if Enum.all?(board, fn {_, elem} -> elem != nil end) do
+      {:game_over, :x}
+    else
+      {:game_is_on, nil}
+    end
   end
 
   defp new_game do

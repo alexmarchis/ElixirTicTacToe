@@ -38,7 +38,7 @@ defmodule TttServer.GameArenaTests do
     assert GameArena.place_move(arena, gameId, ghitaId, 5) == {:ok, "Good move"}
     assert GameArena.place_move(arena, gameId, alexId, 8) == {:ok, "Good move"}
 
-    {:game_is_on, _, gameState} = GameArena.get_game_status(arena, gameId)
+    {:game_is_on, _, gameState} = GameArena.get_game_status(arena, gameId, alexId)
 
     assert gameState[:board] ==
       %{1 => :x, 2 => nil, 3 => nil,
