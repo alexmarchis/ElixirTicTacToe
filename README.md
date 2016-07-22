@@ -1,2 +1,4 @@
-# ElixirTicTacToe
-A simple TicTacToe game implemented in Elixir
+# TictactoeGame
+
+**TODO: Add description**
+
