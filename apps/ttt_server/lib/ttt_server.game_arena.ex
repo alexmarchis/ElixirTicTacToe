@@ -74,12 +74,12 @@ defmodule TttServer.GameArena do
   end
 
   def handle_call({:get_game_status, gameId, playerId}, _from, {players, games}) do
-    message =
-      with  {:ok, player} <- Map.fetch(players, playerId),
+    case with  {:ok, player} <- Map.fetch(players, playerId),
             {:ok, game} <- Map.fetch(games, gameId),
-            do: TttServer.Game.game_status(game.gamePid, playerId)
-
-    {:reply, message, {players, games}}
+            do: handle_game_status(gameId, game.gamePid, playerId, games) do
+      :error                  -> {:reply, "Invalid game or player", {players, games}}
+      {updatedGames, message} -> {:reply, message, {players, updatedGames}}
+    end
   end
 
   def handle_call({:get_player_statistics, playerId}, _from, {players, games}) do
@@ -105,12 +105,24 @@ defmodule TttServer.GameArena do
   defp generate_id([]), do: 1;
   defp generate_id(ids), do: Enum.max(ids) + 1;
 
-  defp handle_game_status(gameId, gamePid) do
-    case TttServer.Game.game_status(gamePid) do
-      {:game_is_on, _message, _gameState} -> {:ok, "Good move"}
-      {:game_over, _message, gameState} ->
-        update_players(gameState)
-        end_game(gameId, gamePid)
+  defp handle_game_status(gameId, gamePid, playerId, games) do
+    case TttServer.Game.game_status(gamePid, playerId) do
+      {:game_is_on, _noWinnerId, gameState} -> {games, {:game_is_on, nil, gameState}}
+      {:game_over, winningPlayerId, gameState} -> {games, {:game_over, winningPlayerId, gameState}}
+      {:game_closed, winningPlayerId, gameState} ->
+        update_players(gameState, winningPlayerId)
+        updatedGames = end_game(gameId, gamePid, games)
+        {updatedGames, {:game_over, winningPlayerId, gameState}}
     end
+  end
+
+  defp update_players(gameState, winningPlayerId) do
+
+  end
+
+  defp end_game(gameId, gamePid, games) do
+    IO.puts "ending game"
+    TttServer.Game.stop_game(gamePid)
+    Map.delete(games, gameId)
   end
 end

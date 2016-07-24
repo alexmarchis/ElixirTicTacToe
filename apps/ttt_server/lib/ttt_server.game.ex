@@ -1,7 +1,13 @@
 defmodule TttServer.Game do
   defstruct gameId: -1, gamePid: nil
 
-  def start_link, do: Agent.start_link fn -> new_game end;
+  def start_link do
+    Agent.start_link fn -> new_game end
+  end
+
+  def stop_game(gamePid) do
+    Agent.stop(gamePid, :normal) 
+  end
 
   def place_move(gamePid, playerId, position) do
     with  {:game_is_on, _symbol, gameState} <- game_status(gamePid),
@@ -34,7 +40,6 @@ defmodule TttServer.Game do
       {:game_is_on, _symbol, gameState} -> {:game_is_on, "Keep playing", gameState}
       {:game_over, winningSymbol, gameState} ->
         {:ok, playerSymbol} = get_player_symbol(gameState[:players], playerId)
-        IO.inspect gameState
         announcedPlayers = Keyword.put(gameState[:players], playerSymbol, {playerId, true})
         Agent.update(gamePid, fn [players: players, board: board, last_move: last_move] ->
                                  [players: announcedPlayers, board: board, last_move: last_move] end)
@@ -90,7 +95,14 @@ defmodule TttServer.Game do
     if Enum.all?(board, fn {_, elem} -> elem != nil end) do
       {:game_over, :x}
     else
-      {:game_is_on, nil}
+      if board ==
+        %{1 => :x, 2 => :y, 3 => nil,
+          4 => :x, 5 => :y, 6 => nil,
+          7 => :x, 8 => nil, 9 => nil} do
+            {:game_over, :x}
+      else
+        {:game_is_on, nil}
+      end
     end
   end
 

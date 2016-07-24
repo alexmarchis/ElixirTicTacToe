@@ -46,4 +46,24 @@ defmodule TttServer.GameArenaTests do
         7 => nil, 8 => :x, 9 => nil}
 
   end
+
+  test "Player wins, game is closed after both players get status", %{gameArena: arena} do
+    ghitaId = GameArena.get_player(arena, "Ghita")
+    alexId = GameArena.get_player(arena, "Alex")
+
+    {:ok, gameId} = GameArena.find_game(arena, alexId)
+    assert GameArena.find_game(arena, ghitaId) == {:ok, gameId}
+
+    assert GameArena.place_move(arena, gameId, alexId, 1) == {:ok, "Good move"}
+    assert GameArena.place_move(arena, gameId, ghitaId, 5) == {:ok, "Good move"}
+    assert GameArena.place_move(arena, gameId, alexId, 7) == {:ok, "Good move"}
+    assert GameArena.place_move(arena, gameId, ghitaId, 2) == {:ok, "Good move"}
+    assert GameArena.place_move(arena, gameId, alexId, 4) == {:ok, "Good move"}
+
+    {:game_over, ^alexId, _gameState} = GameArena.get_game_status(arena, gameId, alexId)
+    {:game_over, ^alexId, _gameState} = GameArena.get_game_status(arena, gameId, ghitaId)
+
+    assert GameArena.get_game_status(arena, gameId, alexId) == "Invalid game or player"
+
+  end
 end
