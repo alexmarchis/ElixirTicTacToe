@@ -68,7 +68,7 @@ defmodule TttServer.GameArena do
       message =
         with {:ok, player} <- Map.fetch(players, playerId),
              {:ok, game} <- Map.fetch(games, gameId),
-             do: TttServer.Game.place_move(game.gamePid, player.playerId, position)
+             do: TttServer.GameActor.place_move(game.gamePid, player.playerId, position)
 
       {:reply, message, {players, games}}
   end
@@ -91,7 +91,7 @@ defmodule TttServer.GameArena do
   end
 
   defp try_add_player(game, playerId) do
-     case TttServer.Game.add_player(game.gamePid, playerId) do
+     case TttServer.GameActor.add_player(game.gamePid, playerId) do
        {:ok, _} -> true
        {:error, _} -> false
      end
@@ -106,7 +106,7 @@ defmodule TttServer.GameArena do
   defp generate_id(ids), do: Enum.max(ids) + 1;
 
   defp handle_game_status(gameId, gamePid, playerId, games) do
-    case TttServer.Game.game_status(gamePid, playerId) do
+    case TttServer.GameActor.game_status(gamePid, playerId) do
       {:game_is_on, _noWinnerId, gameState} -> {games, {:game_is_on, nil, gameState}}
       {:game_over, winningPlayerId, gameState} -> {games, {:game_over, winningPlayerId, gameState}}
       {:game_closed, winningPlayerId, gameState} ->
@@ -122,7 +122,7 @@ defmodule TttServer.GameArena do
 
   defp end_game(gameId, gamePid, games) do
     IO.puts "ending game"
-    TttServer.Game.stop_game(gamePid)
+    TttServer.GameActor.stop_game(gamePid)
     Map.delete(games, gameId)
   end
 end

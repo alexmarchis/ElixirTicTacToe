@@ -8,13 +8,13 @@ defmodule TttServer.Game.Supervisor do
     Supervisor.start_link(__MODULE__, :ok, name: @name)
   end
 
-  def start_game do
+  def start_game() do
     Supervisor.start_child(@name, [])
   end
 
   def init(:ok) do
     children = [
-      worker(TttServer.Game, [], restart: :temporary)
+      worker(TttServer.GameActor, [], restart: :temporary)
       # temporary - the child process is never restarted
     ]
 
