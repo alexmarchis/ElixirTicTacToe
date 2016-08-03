@@ -10,6 +10,11 @@ defmodule TttServer.GameArena do
     GenServer.call(server, {:get_player, playerName})
   end
 
+  #method useful for playing around and killing players to test stability
+  def kill_player(server, playerId) do
+    GenServer.cast(server, {:kill_player, playerId})
+  end
+
   def find_game(server, playerId) do
     GenServer.call(server, {:find_game, playerId})
   end
@@ -39,9 +44,19 @@ defmodule TttServer.GameArena do
       {playerId, _playerName} -> {:reply, playerId, {players, games}}
       nil ->
         nextPlayerId = players |> Map.keys |> generate_id
-        {:reply, nextPlayerId, {Map.put(players, nextPlayerId, %TttServer.Player{playerId: nextPlayerId, playerName: playerName}), games}}
-        _ -> {:reply, :error, {players, games}}
+        {:ok, playerPid} = TttServer.Player.Supervisor.start_player
+        ref = Process.monitor(playerPid)
+        player = %TttServer.Player{playerId: nextPlayerId, playerName: playerName, playerPid: playerPid, processRef: ref}
+        {:reply, nextPlayerId, {Map.put(players, nextPlayerId, player), games}}
+      _   -> {:reply, :error, {players, games}}
     end
+  end
+
+  def handle_cast({:kill_player, playerId}, {players, games}) do
+    player = players |> Map.fetch!(playerId)
+    IO.inspect player
+    Process.exit(player.playerPid, :kill)
+    {:noreply, {players, games}}
   end
 
   def handle_call({:find_game, playerId}, _from, {players, games}) do
@@ -76,14 +91,32 @@ defmodule TttServer.GameArena do
   def handle_call({:get_game_status, gameId, playerId}, _from, {players, games}) do
     case with  {:ok, player} <- Map.fetch(players, playerId),
             {:ok, game} <- Map.fetch(games, gameId),
-            do: handle_game_status(gameId, game.gamePid, playerId, games) do
+            do: handle_game_status(player, game, players, games) do
       :error                  -> {:reply, "Invalid game or player", {players, games}}
       {updatedGames, message} -> {:reply, message, {players, updatedGames}}
     end
   end
 
   def handle_call({:get_player_statistics, playerId}, _from, {players, games}) do
-    #TODO
+    case Map.fetch(players, playerId) do
+      {:ok, player} ->
+        statistics = TttServer.Player.get_player_statistics(player.playerPid)
+        {:reply, statistics, {players, games}}
+      :error -> {:reply, {:invalid_player, "Invalid player"} , {players, games}}
+    end
+  end
+
+  def handle_info({:DOWN, ref, :process, _pid, _reason}, {players, games}) do
+    case Map.fetch(players, fn player -> player.processRef == ref end) do
+      {:ok, player} ->
+        #TODO this will be removed when we implement naming registration
+        #temporary manual restart of a player
+        {:ok, playerPid} = TttServer.Player.Supervisor.start_player
+        ref = Process.monitor(playerPid)
+        player = %TttServer.Player{playerId: player.playerId, playerName: player.playerName, playerPid: playerPid, processRef: ref}
+        {:noreply, {Map.put(players, player.playerId, player), games}}
+      :error -> {:noreply, {players, games}}
+    end
   end
 
   def handle_info(_msg, state) do
@@ -105,19 +138,29 @@ defmodule TttServer.GameArena do
   defp generate_id([]), do: 1;
   defp generate_id(ids), do: Enum.max(ids) + 1;
 
-  defp handle_game_status(gameId, gamePid, playerId, games) do
-    case TttServer.GameActor.game_status(gamePid, playerId) do
+  defp handle_game_status(player, game, players, games) do
+    case TttServer.GameActor.game_status(game.gamePid, player.playerId) do
       {:game_is_on, _noWinnerId, gameState} -> {games, {:game_is_on, nil, gameState}}
       {:game_over, winningPlayerId, gameState} -> {games, {:game_over, winningPlayerId, gameState}}
       {:game_closed, winningPlayerId, gameState} ->
-        update_players(gameState, winningPlayerId)
-        updatedGames = end_game(gameId, gamePid, games)
+        update_players(players, gameState, winningPlayerId)
+        updatedGames = end_game(game.gameId, game.gamePid, games)
         {updatedGames, {:game_over, winningPlayerId, gameState}}
     end
   end
 
-  defp update_players(gameState, winningPlayerId) do
-
+  defp update_players(players, gameState, winningPlayerId) do
+    mappedElements = gameState[:players]
+    |> Keyword.values()
+    |> Enum.map(fn {playerId, _announced} -> Map.fetch!(players, playerId) end)
+    IO.inspect mappedElements
+    |> Enum.each(fn
+        player -> if(player.playerId == winningPlayerId) do
+          TttServer.Player.game_won(player.playerPid)
+        else
+          TttServer.Player.game_lost(player.playerPid)
+        end
+      end)
   end
 
   defp end_game(gameId, gamePid, games) do

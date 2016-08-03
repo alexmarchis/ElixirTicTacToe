@@ -141,8 +141,4 @@ defmodule TttServer.GameActor do
       4 => nil, 5 => nil, 6 => nil,
       7 => nil, 8 => nil, 9 => nil}
   end
-
-  defp server_name(gameId) do
-    {:global, {:game, gameId}}
-  end
 end

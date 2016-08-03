@@ -8,7 +8,8 @@ defmodule TttServer.GameArena.Supervisor do
   def init(:ok) do
     children = [
       worker(TttServer.GameArena, [GameArena]),
-      supervisor(TttServer.Game.Supervisor, [])
+      supervisor(TttServer.Game.Supervisor, []),
+      supervisor(TttServer.Player.Supervisor, [])
     ]
 
     supervise(children, strategy: :rest_for_one)
