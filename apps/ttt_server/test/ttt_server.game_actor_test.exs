@@ -8,57 +8,53 @@ defmodule TttServer.GameActorTest do
     {:ok, gameActor: game}
   end
 
-  test "temporary test: game is won by last player", %{gameActor: game} do
+  test "game is won by player 2", %{gameActor: game} do
     GameActor.add_player(game, 1)
     GameActor.add_player(game, 2)
 
     {:ok, _} = GameActor.place_move(game, 1, 1)
     {:game_is_on, _, _} = GameActor.game_status(game)
-    {:ok, _} = GameActor.place_move(game, 2, 2)
-    {:game_is_on, _, _} = GameActor.game_status(game)
-    {:ok, _} = GameActor.place_move(game, 1, 3)
-    {:game_is_on, _, _} = GameActor.game_status(game)
     {:ok, _} = GameActor.place_move(game, 2, 4)
-    {:game_is_on, _, _} = GameActor.game_status(game)
-    {:ok, _} = GameActor.place_move(game, 1, 5)
-    {:game_is_on, _, _} = GameActor.game_status(game)
-    {:ok, _} = GameActor.place_move(game, 2, 6)
     {:game_is_on, _, _} = GameActor.game_status(game)
     {:ok, _} = GameActor.place_move(game, 1, 7)
     {:game_is_on, _, _} = GameActor.game_status(game)
-    {:ok, _} = GameActor.place_move(game, 2, 8)
+    {:ok, _} = GameActor.place_move(game, 2, 5)
     {:game_is_on, _, _} = GameActor.game_status(game)
     {:ok, _} = GameActor.place_move(game, 1, 9)
-    {gameStatus, _,_} = GameActor.game_status(game)
+    {:game_is_on, _, _} = GameActor.game_status(game)
+    {:ok, _} = GameActor.place_move(game, 2, 6)
+    {:game_over, winner, _} = GameActor.game_status(game, 1)
+    {:game_closed, ^winner, _} = GameActor.game_status(game, 2)
 
-    assert gameStatus == :game_over
+    assert winner == 2
   end
 
-  test "temporary test: game is won by last player game is closed after both players know the result" , %{gameActor: game}do
+  test "game is a draw, winnerId is nil" , %{gameActor: game}do
     GameActor.add_player(game, 1)
     GameActor.add_player(game, 2)
 
     {:ok, _} = GameActor.place_move(game, 1, 1)
     {:game_is_on, _, _} = GameActor.game_status(game)
-    {:ok, _} = GameActor.place_move(game, 2, 2)
-    {:game_is_on, _, _} = GameActor.game_status(game)
-    {:ok, _} = GameActor.place_move(game, 1, 3)
-    {:game_is_on, _, _} = GameActor.game_status(game)
-    {:ok, _} = GameActor.place_move(game, 2, 4)
+    {:ok, _} = GameActor.place_move(game, 2, 9)
     {:game_is_on, _, _} = GameActor.game_status(game)
     {:ok, _} = GameActor.place_move(game, 1, 5)
     {:game_is_on, _, _} = GameActor.game_status(game)
-    {:ok, _} = GameActor.place_move(game, 2, 6)
+    {:ok, _} = GameActor.place_move(game, 2, 3)
     {:game_is_on, _, _} = GameActor.game_status(game)
-    {:ok, _} = GameActor.place_move(game, 1, 7)
+    {:ok, _} = GameActor.place_move(game, 1, 6)
+    {:game_is_on, _, _} = GameActor.game_status(game)
+    {:ok, _} = GameActor.place_move(game, 2, 4)
+    {:game_is_on, _, _} = GameActor.game_status(game)
+    {:ok, _} = GameActor.place_move(game, 1, 2)
     {:game_is_on, _, _} = GameActor.game_status(game)
     {:ok, _} = GameActor.place_move(game, 2, 8)
     {:game_is_on, _, _} = GameActor.game_status(game)
-    {:ok, _} = GameActor.place_move(game, 1, 9)
-    {_, _,_} = GameActor.game_status(game, 1)
-    {gameStatus, _,_,} = GameActor.game_status(game, 2)
+    {:ok, _} = GameActor.place_move(game, 1, 7)
 
-    assert gameStatus == :game_closed
+    {:game_over, winner, _} = GameActor.game_status(game, 1)
+    {:game_closed, ^winner, _} = GameActor.game_status(game, 2)
+
+    assert winner == nil
   end
 
   test "game status is correct after 3 moves" , %{gameActor: game} do

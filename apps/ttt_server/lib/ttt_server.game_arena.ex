@@ -155,10 +155,10 @@ defmodule TttServer.GameArena do
     |> Enum.map(fn {playerId, _announced} -> Map.fetch!(players, playerId) end)
     IO.inspect mappedElements
     |> Enum.each(fn
-        player -> if(player.playerId == winningPlayerId) do
-          TttServer.Player.game_won(player.playerPid)
-        else
-          TttServer.Player.game_lost(player.playerPid)
+        player -> case player.playerId do
+          ^winningPlayerId -> TttServer.Player.game_won(player.playerPid)
+          nil -> TttServer.Player.game_draw(player.playerPid)
+          _otherId -> TttServer.Player.game_lost(player.playerPid)
         end
       end)
   end

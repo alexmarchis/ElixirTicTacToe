@@ -1,5 +1,5 @@
 defmodule TttServer.Player do
-  defstruct playerId: -1, playerName: "Anon", playerPid: nil, processRef: nil 
+  defstruct playerId: -1, playerName: "Anon", playerPid: nil, processRef: nil
 
   def start_link do
     Agent.start_link fn -> empty_statistics end
@@ -13,6 +13,10 @@ defmodule TttServer.Player do
   def game_lost(playerPid) do
     Agent.update(playerPid, fn [games_won: gamesWon, games_lost: gamesLost] ->
                              [games_won: gamesWon, games_lost: gamesLost + 1] end)
+  end
+
+  def game_draw(playerPid) do
+    
   end
 
   def get_player_statistics(playerPid) do

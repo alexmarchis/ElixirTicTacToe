@@ -65,7 +65,10 @@ defmodule TttServer.GameActor do
         announcedPlayers = Keyword.put(gameState[:players], playerSymbol, {playerId, true})
         newGameState = gameState |> Keyword.put(:players, announcedPlayers)
 
-        {winnerId, _announced} = gameState[:players][winningSymbol]
+        winnerId = if winningSymbol != nil do
+          {winnerId, _announced} = gameState[:players][winningSymbol]
+          winnerId
+        end
 
         if Enum.all?(announcedPlayers, fn {_symbol, {_playerId, announced}} -> announced==true end) do
           {:reply, {:game_closed, winnerId, newGameState}, newGameState}
@@ -85,7 +88,7 @@ defmodule TttServer.GameActor do
     || gameState[:players][:y] == nil) do
       {:waiting_for_players, nil}
     else
-      board_winning_state(gameState[:board])
+      TttServer.GameStateCalculator.calculate_state(gameState[:board])
     end
   end
 
@@ -112,21 +115,6 @@ defmodule TttServer.GameActor do
       nil               -> {:ok, Map.update!(board, position, fn _ -> playerSymbol end)}
       :invalid_position -> {:invalid_move, "Position does not exist"}
       _                 -> {:invalid_move, "Position is already filled"}
-    end
-  end
-
-  defp board_winning_state(board) do
-    if Enum.all?(board, fn {_, elem} -> elem != nil end) do
-      {:game_over, :x}
-    else
-      if board ==
-        %{1 => :x, 2 => :y, 3 => nil,
-          4 => :x, 5 => :y, 6 => nil,
-          7 => :x, 8 => nil, 9 => nil} do
-            {:game_over, :x}
-      else
-        {:game_is_on, nil}
-      end
     end
   end
 

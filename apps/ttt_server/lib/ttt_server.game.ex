@@ -6,7 +6,7 @@ defmodule TttServer.Game do
   end
 
   def stop_game(gamePid) do
-    Agent.stop(gamePid, :normal) 
+    Agent.stop(gamePid, :normal)
   end
 
   def place_move(gamePid, playerId, position) do
@@ -44,7 +44,10 @@ defmodule TttServer.Game do
         Agent.update(gamePid, fn [players: players, board: board, last_move: last_move] ->
                                  [players: announcedPlayers, board: board, last_move: last_move] end)
 
-        {winnerId, _announced} = gameState[:players][winningSymbol]
+        winnerId = if winningSymbol != nil do
+          {winnerId, _announced} = gameState[:players][winningSymbol]
+          winnerId
+        end
 
         if Enum.all?(announcedPlayers, fn {_symbol, {_playerId, announced}} -> announced==true end) do
           {:game_closed, winnerId, gameState}
@@ -60,7 +63,7 @@ defmodule TttServer.Game do
     || gameState[:players][:y] == nil) do
       {:waiting_for_players, "Don't be shy", nil}
     else
-      {winningState, winningSymbol} = board_winning_state(gameState[:board])
+      {winningState, winningSymbol} = TttServer.GameStateCalculator.calculate_state(gameState[:board])
       {winningState, winningSymbol, gameState}
     end
   end
@@ -88,21 +91,6 @@ defmodule TttServer.Game do
       nil               -> {:ok, Map.update!(board, position, fn _ -> playerSymbol end)}
       :invalid_position -> {:invalid_move, "Position does not exist"}
       _                 -> {:invalid_move, "Position is already filled"}
-    end
-  end
-
-  defp board_winning_state(board) do
-    if Enum.all?(board, fn {_, elem} -> elem != nil end) do
-      {:game_over, :x}
-    else
-      if board ==
-        %{1 => :x, 2 => :y, 3 => nil,
-          4 => :x, 5 => :y, 6 => nil,
-          7 => :x, 8 => nil, 9 => nil} do
-            {:game_over, :x}
-      else
-        {:game_is_on, nil}
-      end
     end
   end
 
