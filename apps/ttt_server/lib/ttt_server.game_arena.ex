@@ -52,13 +52,6 @@ defmodule TttServer.GameArena do
     end
   end
 
-  def handle_cast({:kill_player, playerId}, {players, games}) do
-    player = players |> Map.fetch!(playerId)
-    IO.inspect player
-    Process.exit(player.playerPid, :kill)
-    {:noreply, {players, games}}
-  end
-
   def handle_call({:find_game, playerId}, _from, {players, games}) do
     if Map.has_key?(players, playerId) do
       case games |> Enum.find(fn {_gameId, game} -> try_add_player(game, playerId) end) do
@@ -75,7 +68,7 @@ defmodule TttServer.GameArena do
           end
       end
     else
-      {:reply, {:invalid_player, "Invalid player id"}, {players, games}}
+      {:reply, {:error, "Invalid player id"}, {players, games}}
     end
   end
 
@@ -92,8 +85,8 @@ defmodule TttServer.GameArena do
     case with  {:ok, player} <- Map.fetch(players, playerId),
             {:ok, game} <- Map.fetch(games, gameId),
             do: handle_game_status(player, game, players, games) do
-      :error                  -> {:reply, "Invalid game or player", {players, games}}
-      {updatedGames, message} -> {:reply, message, {players, updatedGames}}
+      :error                  -> {:reply, {:error, "Invalid game or player"}, {players, games}}
+      {updatedGames, message} -> {:reply, {:ok, message}, {players, updatedGames}}
     end
   end
 
@@ -101,9 +94,16 @@ defmodule TttServer.GameArena do
     case Map.fetch(players, playerId) do
       {:ok, player} ->
         statistics = TttServer.Player.get_player_statistics(player.playerPid)
-        {:reply, statistics, {players, games}}
+        {:reply, {:ok, statistics}, {players, games}}
       :error -> {:reply, {:invalid_player, "Invalid player"} , {players, games}}
     end
+  end
+
+  def handle_cast({:kill_player, playerId}, {players, games}) do
+    player = players |> Map.fetch!(playerId)
+    IO.inspect player
+    Process.exit(player.playerPid, :kill)
+    {:noreply, {players, games}}
   end
 
   def handle_info({:DOWN, ref, :process, _pid, _reason}, {players, games}) do
@@ -140,6 +140,7 @@ defmodule TttServer.GameArena do
 
   defp handle_game_status(player, game, players, games) do
     case TttServer.GameActor.game_status(game.gamePid, player.playerId) do
+      {:waiting_for_players, nil, nil} -> {games, {:waiting_for_players, nil, nil}}
       {:game_is_on, _noWinnerId, gameState} -> {games, {:game_is_on, nil, gameState}}
       {:game_over, winningPlayerId, gameState} -> {games, {:game_over, winningPlayerId, gameState}}
       {:game_closed, winningPlayerId, gameState} ->

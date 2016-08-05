@@ -59,6 +59,7 @@ defmodule TttServer.GameActor do
 
   def handle_call({:game_status, playerId}, _from, gameState) do
     case get_game_status(gameState) do
+      {:waiting_for_players, nil} -> {:reply, {:waiting_for_players, nil, nil}, gameState}
       {:game_is_on, _symbol} -> {:reply, {:game_is_on, nil, gameState}, gameState}
       {:game_over, winningSymbol} ->
         {:ok, playerSymbol} = get_player_symbol(gameState[:players], playerId)

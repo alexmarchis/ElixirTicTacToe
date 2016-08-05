@@ -41,7 +41,7 @@ defmodule TttServer.Game do
       {:game_over, winningSymbol, gameState} ->
         {:ok, playerSymbol} = get_player_symbol(gameState[:players], playerId)
         announcedPlayers = Keyword.put(gameState[:players], playerSymbol, {playerId, true})
-        Agent.update(gamePid, fn [players: players, board: board, last_move: last_move] ->
+        Agent.update(gamePid, fn [players: _players, board: board, last_move: last_move] ->
                                  [players: announcedPlayers, board: board, last_move: last_move] end)
 
         winnerId = if winningSymbol != nil do

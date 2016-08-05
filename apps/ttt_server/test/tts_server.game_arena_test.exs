@@ -14,6 +14,13 @@ defmodule TttServer.GameArenaTests do
     assert GameArena.get_player(arena, "Alex") == 2
   end
 
+  test "one player entered game, status is waiting_for_players", %{gameArena: arena} do
+    assert GameArena.get_player(arena, "Ghita") == 1
+    assert GameArena.find_game(arena, 1) == {:ok, 1}
+
+    assert GameArena.get_game_status(arena, 1,1) == {:ok, {:waiting_for_players, nil, nil}}
+  end
+
   test "find_game creates game and adds players", %{gameArena: arena} do
     assert GameArena.get_player(arena, "Ghita") == 1
     assert GameArena.get_player(arena, "Alex") == 2
@@ -24,7 +31,7 @@ defmodule TttServer.GameArenaTests do
   end
 
   test "find_game called with invalid player will not create game", %{gameArena: arena} do
-    assert GameArena.find_game(arena, 1) == {:invalid_player, "Invalid player id"}
+    assert GameArena.find_game(arena, 1) == {:error, "Invalid player id"}
   end
 
   test "2 players join a game and one move is placed, game status is as expected ", %{gameArena: arena} do
@@ -38,7 +45,7 @@ defmodule TttServer.GameArenaTests do
     assert GameArena.place_move(arena, gameId, ghitaId, 5) == {:ok, "Good move"}
     assert GameArena.place_move(arena, gameId, alexId, 8) == {:ok, "Good move"}
 
-    {:game_is_on, _, gameState} = GameArena.get_game_status(arena, gameId, alexId)
+    {:ok, {:game_is_on, _, gameState}} = GameArena.get_game_status(arena, gameId, alexId)
 
     assert gameState[:board] ==
       %{1 => :x, 2 => nil, 3 => nil,
@@ -60,10 +67,10 @@ defmodule TttServer.GameArenaTests do
     assert GameArena.place_move(arena, gameId, ghitaId, 2) == {:ok, "Good move"}
     assert GameArena.place_move(arena, gameId, alexId, 4) == {:ok, "Good move"}
 
-    {:game_over, ^alexId, _gameState} = GameArena.get_game_status(arena, gameId, alexId)
-    {:game_over, ^alexId, _gameState} = GameArena.get_game_status(arena, gameId, ghitaId)
+    {:ok, {:game_over, ^alexId, _gameState}} = GameArena.get_game_status(arena, gameId, alexId)
+    {:ok, {:game_over, ^alexId, _gameState}} = GameArena.get_game_status(arena, gameId, ghitaId)
 
-    assert GameArena.get_game_status(arena, gameId, alexId) == "Invalid game or player"
+    assert GameArena.get_game_status(arena, gameId, alexId) == {:error, "Invalid game or player"}
 
   end
 
@@ -80,10 +87,10 @@ defmodule TttServer.GameArenaTests do
     assert GameArena.place_move(arena, gameId, ghitaId, 2) == {:ok, "Good move"}
     assert GameArena.place_move(arena, gameId, alexId, 4) == {:ok, "Good move"}
 
-    {:game_over, ^alexId, _gameState} = GameArena.get_game_status(arena, gameId, alexId)
-    {:game_over, ^alexId, _gameState} = GameArena.get_game_status(arena, gameId, ghitaId)
+    {:ok, {:game_over, ^alexId, _gameState}} = GameArena.get_game_status(arena, gameId, alexId)
+    {:ok, {:game_over, ^alexId, _gameState}} = GameArena.get_game_status(arena, gameId, ghitaId)
 
-    assert GameArena.get_player_statistics(arena, alexId) == [games_won: 1, games_lost: 0]
-    assert GameArena.get_player_statistics(arena, ghitaId) == [games_won: 0, games_lost: 1]
+    assert GameArena.get_player_statistics(arena, alexId) == {:ok, [games_won: 1, games_lost: 0]}
+    assert GameArena.get_player_statistics(arena, ghitaId) == {:ok, [games_won: 0, games_lost: 1]}
   end
 end
